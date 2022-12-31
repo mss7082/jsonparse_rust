@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
@@ -31,8 +32,18 @@ struct Address {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Geo {
-    lat: String,
-    lng: String,
+    #[serde(deserialize_with = "de_from_str")]
+    lat: f64,
+    #[serde(deserialize_with = "de_from_str")]
+    lng: f64,
+}
+
+fn de_from_str<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = <&str>::deserialize(deserializer)?;
+    f64::from_str(&s).map_err(de::Error::custom)
 }
 
 #[tokio::main]
@@ -44,8 +55,9 @@ async fn main() -> Result<(), reqwest::Error> {
         .json()
         .await?;
 
-    let result: Vec<_> = response.iter().map(|user| &user.username).collect();
-    println!("{:?}", result);
+    println!("{:#?}", response);
+    // let result: Vec<_> = response.iter().map(|user| &user.username).collect();
+    // println!("{:?}", result);
 
     Ok(())
 }
